@@ -20,8 +20,7 @@ class MainActivity : AppCompatActivity() {
                 it,
                 supportFragmentManager,
                 attribute = PopupAttribute(
-                    width = 1000,
-                    height = 800,
+                    height = 400.dp,
                     horizontalGravity = HorizontalGravity.END,
                     partitionX = 0,
                     partitionY = 0,
