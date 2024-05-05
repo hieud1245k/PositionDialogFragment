@@ -1,5 +1,7 @@
 # PositionDialogFragment
 
+[popup_demo.webm](https://github.com/hieud1245k/PositionDialogFragment/assets/54438081/c8a6e527-83d2-40ad-b69e-0f099f7d5d43)
+
 This is an Android project developed in Kotlin and Java, using Gradle as the build system. The project demonstrates the use of a custom dialog fragment, `PositionDialogFragment`, which can be positioned on the screen according to the specified `PopupAttribute`.
 
 ## Getting Started
