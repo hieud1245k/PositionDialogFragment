@@ -4,50 +4,52 @@ import android.app.Dialog
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.InsetDrawable
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.*
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.DialogFragment
-import androidx.viewbinding.ViewBinding
-import com.hieuminh.positiondialoglibrary.popup.ModuleUtils.addEditTextIfNotExist
-import com.hieuminh.positiondialoglibrary.popup.ModuleUtils.getScreenWidth
+import androidx.fragment.app.Fragment
+import com.hieuminh.positiondialoglibrary.databinding.FragmentTabletPopupBinding
 import com.hieuminh.positiondialoglibrary.popup.ModuleUtils.getStatusBarHeight
 import com.hieuminh.positiondialoglibrary.popup.ModuleUtils.getXY
 import com.hieuminh.positiondialoglibrary.popup.ModuleUtils.isKeyboardVisible
-import com.hieuminh.positiondialoglibrary.popup.ModuleUtils.setSoftInputAdjustResize
 import kotlin.math.max
 import kotlin.math.min
 
-internal abstract class PositionDialogFragment<VB : ViewBinding>(private val sourceView: View?) :
-    DialogFragment(), InitLayout<VB> {
+internal class PositionDialogFragment : DialogFragment() {
     private var handler: Handler? = null
-    private var width: Int? = null
-    private var horizontalGravity: HorizontalGravity? = null
     private var currentPosition: Pair<Int, Int>? = null
 
-    var partition: Int = 0
+    var attribute: PopupAttribute = PopupAttribute.DEFAULT
+    var contentFragment: Fragment? = null
+    var sourceView: View? = null
 
-    var binding: VB? = null
-        private set
+    private val binding: FragmentTabletPopupBinding by lazy {
+        FragmentTabletPopupBinding.inflate(layoutInflater)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        if (binding == null) {
-            binding = getViewBinding()
-        }
-        return binding?.root
+    ): View {
+        return binding.root
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        binding = getViewBinding()
         val dialog = AlertDialog.Builder(requireActivity())
-            .setView(binding!!.root)
+            .setView(binding.root)
             .create()
 
         val inset = InsetDrawable(ColorDrawable(Color.WHITE), 0, 0, 0, 0)
@@ -58,25 +60,22 @@ internal abstract class PositionDialogFragment<VB : ViewBinding>(private val sou
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         handler = Handler(Looper.getMainLooper())
-        initView()
-        initListener()
-        addEditTextIfNotExist(view)
+        attribute.height?.let { limitedHeight ->
+            (binding.flContent.layoutParams as? ConstraintLayout.LayoutParams)?.height = limitedHeight
+        }
+        contentFragment?.let { contentFragment ->
+            childFragmentManager.beginTransaction().replace(binding.flContent.id, contentFragment).commit()
+        }
     }
 
     override fun onStart() {
         super.onStart()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            dialog?.window?.setDecorFitsSystemWindows(false)
-        }
-        setSoftInputAdjustResize(dialog?.window, binding?.root)
+        dialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         initViewPosition.run()
     }
 
     override fun onStop() {
         super.onStop()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            dialog?.window?.setDecorFitsSystemWindows(true)
-        }
         handler?.removeCallbacks(initViewPosition)
     }
 
@@ -98,29 +97,32 @@ internal abstract class PositionDialogFragment<VB : ViewBinding>(private val sou
                 val window = dialog?.window
                 val params = window?.attributes
                 window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-                params?.x = getPositionX(view, sourceX, width, horizontalGravity)
+                params?.x = getPositionX(view, sourceX, attribute.width, attribute.horizontalGravity)
                 params?.y = getPositionY(view, sourceY)
                 window?.setGravity(Gravity.TOP or Gravity.START)
-                window?.setLayout(width ?: view.width, WindowManager.LayoutParams.WRAP_CONTENT)
+                window?.setLayout(attribute.width ?: view.width, WindowManager.LayoutParams.WRAP_CONTENT)
             }
             handler?.postDelayed(this, if (isKeyBoardVisible) 100 else 300)
         }
     }
 
-    private fun getPositionX(sourceView: View, sourceX: Int, width: Int?, horizontalGravity: HorizontalGravity?): Int? {
-        val screenWidth = getScreenWidth(activity)
-        return when {
+    private fun getPositionX(sourceView: View, sourceX: Int, width: Int?, horizontalGravity: HorizontalGravity?): Int {
+        val screenWidth = ModuleUtils.getScreenWidth(activity)
+        return attribute.partitionX + when {
             horizontalGravity == HorizontalGravity.START -> {
                 val startWidth = sourceX + sourceView.width - (width ?: 0) // Distance between left screen and source view
                 max(0, startWidth)
             }
+
             horizontalGravity == HorizontalGravity.END -> {
                 min(sourceX, screenWidth)
             }
+
             width != null -> {
                 val endWidth = screenWidth - sourceX - sourceView.width // Distance between source view and right screen
                 getPositionX(sourceView, sourceX, width, (if (endWidth < sourceX) HorizontalGravity.START else HorizontalGravity.END))
             }
+
             else -> {
                 sourceX
             }
@@ -128,15 +130,10 @@ internal abstract class PositionDialogFragment<VB : ViewBinding>(private val sou
     }
 
     private fun getPositionY(sourceView: View, sourceY: Int): Int {
-        return sourceY.plus(sourceView.height + DEFAULT_PARTITION + partition).minus(activity.getStatusBarHeight())
-    }
-
-    fun setDefaultWidth(width: Int, horizontalGravity: HorizontalGravity? = null) {
-        this.width = width
-        this.horizontalGravity = horizontalGravity
+        return sourceY.plus(sourceView.height + attribute.partitionY).minus(activity.getStatusBarHeight())
     }
 
     companion object {
-        private const val DEFAULT_PARTITION = 4
+        fun newInstance() = PositionDialogFragment()
     }
 }

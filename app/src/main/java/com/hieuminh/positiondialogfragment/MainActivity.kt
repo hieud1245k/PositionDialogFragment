@@ -1,16 +1,32 @@
 package com.hieuminh.positiondialogfragment
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.hieuminh.positiondialogfragment.databinding.ActivityMainBinding
+import com.hieuminh.positiondialoglibrary.popup.HorizontalGravity
+import com.hieuminh.positiondialoglibrary.popup.PopupAttribute
 
 class MainActivity : AppCompatActivity() {
+    private val binding by lazy {
+        ActivityMainBinding.inflate(layoutInflater)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        findViewById<TextView>(R.id.tvHelloWorld).setOnClickListener {
+        setContentView(binding.root)
+        binding.tvPopup.setOnClickListener {
             val demoFragment = DemoFragment.newInstance()
-            demoFragment.show(it, supportFragmentManager)
+            demoFragment.show(
+                it,
+                supportFragmentManager,
+                attribute = PopupAttribute(
+                    width = 1000,
+                    height = 800,
+                    horizontalGravity = HorizontalGravity.END,
+                    partitionX = 0,
+                    partitionY = 0,
+                )
+            )
         }
     }
 }

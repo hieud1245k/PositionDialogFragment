@@ -5,33 +5,12 @@ import android.graphics.Insets
 import android.graphics.Rect
 import android.os.Build
 import android.util.DisplayMetrics
-import android.view.*
-import android.widget.EditText
+import android.view.View
+import android.view.WindowInsets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.fragment.app.Fragment
 
- object ModuleUtils {
-    fun Fragment.addEditTextIfNotExist(view: View) {
-        var hasEdit = false
-        val viewGroup = view as? ViewGroup ?: return
-        for (i in 0 until view.childCount) {
-            val innerView: View = view.getChildAt(i)
-            if (innerView is EditText) {
-                hasEdit = true
-                break
-            }
-        }
-        if (!hasEdit) {
-            val edt = EditText(context).apply {
-                visibility = View.GONE
-                clearFocus()
-            }
-            viewGroup.removeView(edt)
-            viewGroup.addView(edt)
-        }
-    }
-
+internal object ModuleUtils {
     fun View.isKeyboardVisible(): Boolean {
         val insets = ViewCompat.getRootWindowInsets(this)
         return insets?.isVisible(WindowInsetsCompat.Type.ime()) ?: false
@@ -66,20 +45,4 @@ import androidx.fragment.app.Fragment
         this?.window?.decorView?.getWindowVisibleDisplayFrame(rectangle)
         return rectangle.top
     }
-
-     fun setSoftInputAdjustResize(window: Window?, rootView: View?) {
-         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-             rootView?.setOnApplyWindowInsetsListener { _, windowInsets ->
-                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                     val imeHeight = windowInsets.getInsets(WindowInsets.Type.ime()).bottom
-                     rootView.setPadding(0, 0, 0, imeHeight)
-                     val insets = windowInsets.getInsets(WindowInsets.Type.ime() or WindowInsets.Type.systemGestures())
-                     insets
-                 }
-                 windowInsets
-             }
-         } else {
-             window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-         }
-     }
 }
